@@ -1,0 +1,57 @@
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+
+// Enterprise middleware for authentication, security, and monitoring
+export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl
+
+  // Security headers
+  const response = NextResponse.next()
+  
+  // Add security headers
+  response.headers.set('X-Frame-Options', 'DENY')
+  response.headers.set('X-Content-Type-Options', 'nosniff')
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+  
+  // CORS for API routes
+  if (pathname.startsWith('/api/')) {
+    response.headers.set('Access-Control-Allow-Origin', '*')
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+  }
+
+  // Rate limiting simulation (in production, use Redis or similar)
+  const ip = request.ip || request.headers.get('x-forwarded-for') || 'unknown'
+  const rateLimitKey = `rate_limit_${ip}`
+  
+  // Authentication check for protected API routes
+  if (pathname.startsWith('/api/') && !pathname.startsWith('/api/auth')) {
+    const authHeader = request.headers.get('authorization')
+    
+    // In production, validate JWT token here
+    if (!authHeader && pathname !== '/api/search' && pathname !== '/api/files') {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      )
+    }
+  }
+
+  // Request logging for monitoring
+  console.log(`${new Date().toISOString()} - ${request.method} ${pathname} - ${ip}`)
+
+  return response
+}
+
+export const config = {
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     */
+    '/((?!_next/static|_next/image|favicon.ico).*)',
+  ],
+}
