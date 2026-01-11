@@ -306,12 +306,9 @@
                 </div>
                 <div class="h-4 w-px bg-zinc-800"></div>
                 <div class="flex gap-5">
-                    <button @click="view = 'workspace'" :class="view === 'workspace' ? 'text-white' : 'text-zinc-600'" class="text-[11px] font-bold hover:text-white transition">Workspace</button>
-                    <button @click="view = 'deploy'" :class="view === 'deploy' ? 'text-white' : 'text-zinc-600'" class="text-[11px] font-bold hover:text-white transition">Deployments</button>
-                    <button @click="view = 'analytics'" :class="view === 'analytics' ? 'text-white' : 'text-zinc-600'" class="text-[11px] font-bold hover:text-white transition">Analytics</button>
-                    <button @click="view = 'db'" :class="view === 'db' ? 'text-white' : 'text-zinc-600'" class="text-[11px] font-bold hover:text-white transition">Database</button>
-                    <button @click="view = 'logs'" :class="view === 'logs' ? 'text-white' : 'text-zinc-600'" class="text-[11px] font-bold hover:text-white transition">Logs</button>
-                    <button @click="view = 'monitoring'" :class="view === 'monitoring' ? 'text-white' : 'text-zinc-600'" class="text-[11px] font-bold hover:text-white transition">Monitoring</button>
+                    <button @click="view = 'test'" :class="view === 'test' ? 'text-white' : 'text-zinc-600'" class="text-[11px] font-bold hover:text-white transition">Test</button>
+                    <button @click="view = 'monitor'" :class="view === 'monitor' ? 'text-white' : 'text-zinc-600'" class="text-[11px] font-bold hover:text-white transition">Monitor</button>
+                    <button @click="view = 'summary'" :class="view === 'summary' ? 'text-white' : 'text-zinc-600'" class="text-[11px] font-bold hover:text-white transition">Summary</button>
                 </div>
             </div>
 
@@ -610,7 +607,7 @@
         function kriyaIDE() {
             return {
                 // State
-                view: 'workspace',
+                view: 'test',
                 sidebar: 'files',
                 activeTab: 0,
                 activeFile: 'index.tsx',

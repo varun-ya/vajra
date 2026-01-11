@@ -16,51 +16,45 @@ export default function TopBar() {
           <svg width="16" height="16" viewBox="0 0 76 65" fill="white">
             <path d="M37.5274 0L75.0548 65H0L37.5274 0Z"/>
           </svg>
-          <span className="font-black text-xs tracking-tight text-white">KRIYA</span>
+          <span className="font-black text-xs tracking-tight text-white">VAJRA</span>
         </div>
         <div className="h-4 w-px bg-zinc-800"></div>
         <div className="flex gap-5">
           <button 
             onClick={() => setView('workspace')} 
-            className={`text-[11px] font-bold hover:text-white transition ${view === 'workspace' ? 'text-white' : 'text-zinc-600'}`}
+            className={`text-[11px] font-bold hover:text-white transition relative ${view === 'workspace' ? 'text-white' : 'text-zinc-600'}`}
           >
-            Workspace
+            Code
+            {view === 'workspace' && <div className="absolute -bottom-3 left-0 right-0 h-0.5 bg-white"></div>}
           </button>
-          <button 
-            onClick={() => setView('deploy')} 
-            className={`text-[11px] font-bold hover:text-white transition ${view === 'deploy' ? 'text-white' : 'text-zinc-600'}`}
-          >
-            Deployments
-          </button>
+         
           <button 
             onClick={() => setView('analytics')} 
-            className={`text-[11px] font-bold hover:text-white transition ${view === 'analytics' ? 'text-white' : 'text-zinc-600'}`}
+            className={`text-[11px] font-bold hover:text-white transition relative ${view === 'analytics' ? 'text-white' : 'text-zinc-600'}`}
           >
-            Analytics
+            Summary
+            {view === 'analytics' && <div className="absolute -bottom-3 left-0 right-0 h-0.5 bg-white"></div>}
           </button>
           <button 
             onClick={() => setView('db')} 
-            className={`text-[11px] font-bold hover:text-white transition ${view === 'db' ? 'text-white' : 'text-zinc-600'}`}
+            className={`text-[11px] font-bold hover:text-white transition relative ${view === 'db' ? 'text-white' : 'text-zinc-600'}`}
           >
-            Database
-          </button>
-          <button 
-            onClick={() => setView('logs')} 
-            className={`text-[11px] font-bold hover:text-white transition ${view === 'logs' ? 'text-white' : 'text-zinc-600'}`}
-          >
-            Logs
+            Test
+            {view === 'db' && <div className="absolute -bottom-3 left-0 right-0 h-0.5 bg-white"></div>}
           </button>
           <button 
             onClick={() => setView('monitoring')} 
-            className={`text-[11px] font-bold hover:text-white transition ${view === 'monitoring' ? 'text-white' : 'text-zinc-600'}`}
+            className={`text-[11px] font-bold hover:text-white transition relative ${view === 'monitoring' ? 'text-white' : 'text-zinc-600'}`}
           >
-            Monitoring
+            Monitor
+            {view === 'monitoring' && <div className="absolute -bottom-3 left-0 right-0 h-0.5 bg-white"></div>}
           </button>
           <button 
-            onClick={() => setView('settings')} 
-            className={`text-[11px] font-bold hover:text-white transition ${view === 'settings' ? 'text-white' : 'text-zinc-600'}`}
+            onClick={() => setView('models')} 
+            className={`text-[11px] font-bold hover:text-white transition relative ${view === 'models' ? 'text-white' : 'text-zinc-600'}`}
           >
-            Settings
+            Models
+            {view === 'models' && <div className="absolute -bottom-3 left-0 right-0 h-0.5 bg-white"></div>}
           </button>
         </div>
       </div>

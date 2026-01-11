@@ -17,6 +17,7 @@ import AnalyticsView from '@/components/AnalyticsView'
 import DatabaseView from '@/components/DatabaseView'
 import LogsView from '@/components/LogsView'
 import SettingsView from '@/components/SettingsView'
+import ModelsView from '@/components/ModelsView'
 import { useIDEStore } from '@/stores/ide-store'
 import { useIDEHotkeys } from '@/hooks/useIDEHotkeys'
 
@@ -49,6 +50,8 @@ export default function Home() {
         return <LogsView />
       case 'settings':
         return <SettingsView />
+      case 'models':
+        return <ModelsView />
       default:
         return <MainEditor />
     }

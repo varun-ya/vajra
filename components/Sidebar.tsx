@@ -30,18 +30,17 @@ export default function Sidebar() {
     gitStatus,
     uncommittedChanges,
     fileTree,
-    createFile,
-    createFolder,
     refreshFileTree
   } = useIDEStore()
   
-  const [creatingFile, setCreatingFile] = useState<{ parentId?: string; type: 'file' | 'folder' } | null>(null)
-  const [newItemName, setNewItemName] = useState('')
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; node: FileTreeNode } | null>(null)
   const [renamingNode, setRenamingNode] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
+  const [uploading, setUploading] = useState(false)
+  const [extractedFiles, setExtractedFiles] = useState<Map<string, string>>(new Map())
   const fileManager = FileTreeManager.getInstance()
   const contextMenuRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -66,13 +65,15 @@ export default function Sidebar() {
 
     const existingTab = tabs.find(tab => tab.path === node.path)
     if (existingTab) {
+      const { setActiveTab } = useIDEStore.getState()
+      setActiveTab(existingTab.id)
       return
     }
 
-    const content = getFileContent(node.name)
+    const content = getFileContent(node.name, node.path)
     const language = getLanguage(node.name)
     
-    const { addTab } = useIDEStore.getState()
+    const { addTab, setActiveTab } = useIDEStore.getState()
     addTab({
       id: node.id,
       name: node.name,
@@ -82,24 +83,114 @@ export default function Sidebar() {
       isDirty: false,
       icon: fileManager.getFileIcon(node.name)
     })
+    setActiveTab(node.id)
   }
 
-  const handleCreateItem = () => {
-    if (!newItemName.trim()) return
-    
-    if (creatingFile?.type === 'file') {
-      createFile(creatingFile.parentId || null, newItemName)
-    } else {
-      createFolder(creatingFile.parentId || null, newItemName)
+  const handleZipUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file || !file.name.endsWith('.zip')) {
+      alert('Please select a valid ZIP file')
+      return
     }
-    
-    setCreatingFile(null)
-    setNewItemName('')
-  }
 
-  const handleCancelCreate = () => {
-    setCreatingFile(null)
-    setNewItemName('')
+    setUploading(true)
+    try {
+      const JSZip = (await import('jszip')).default
+      const zip = new JSZip()
+      const contents = await zip.loadAsync(file)
+      
+      // Clear existing file tree
+      fileManager.clearFileTree()
+      
+      const fileContents = new Map<string, string>()
+      let extractedCount = 0
+      
+      // Extract all files and their contents
+      for (const [path, zipEntry] of Object.entries(contents.files)) {
+        if (!zipEntry.dir && path) {
+          try {
+            const content = await zipEntry.async('text')
+            fileContents.set(path, content)
+            extractedCount++
+          } catch (err) {
+            console.warn(`Failed to extract ${path}:`, err)
+          }
+        }
+      }
+      
+      // Build new file tree structure
+      const rootNode: FileTreeNode = {
+        id: 'root',
+        name: file.name.replace('.zip', ''),
+        path: '/',
+        type: 'directory',
+        isExpanded: true,
+        children: []
+      }
+      
+      const folderMap = new Map<string, FileTreeNode>()
+      folderMap.set('', rootNode)
+      
+      // Create directory structure
+      for (const filePath of fileContents.keys()) {
+        const pathParts = filePath.split('/')
+        let currentPath = ''
+        
+        for (let i = 0; i < pathParts.length - 1; i++) {
+          const part = pathParts[i]
+          const parentPath = currentPath
+          currentPath = currentPath ? `${currentPath}/${part}` : part
+          
+          if (!folderMap.has(currentPath)) {
+            const folderNode: FileTreeNode = {
+              id: `folder-${currentPath.replace(/\//g, '-')}`,
+              name: part,
+              path: `/${currentPath}`,
+              type: 'directory',
+              isExpanded: true,
+              children: []
+            }
+            
+            const parent = folderMap.get(parentPath)!
+            parent.children!.push(folderNode)
+            folderMap.set(currentPath, folderNode)
+          }
+        }
+      }
+      
+      // Add files to their respective directories
+      for (const [filePath, content] of fileContents.entries()) {
+        const pathParts = filePath.split('/')
+        const fileName = pathParts[pathParts.length - 1]
+        const dirPath = pathParts.slice(0, -1).join('/')
+        
+        const fileNode: FileTreeNode = {
+          id: `file-${filePath.replace(/\//g, '-')}`,
+          name: fileName,
+          path: `/${filePath}`,
+          type: 'file',
+          size: content.length
+        }
+        
+        const parent = folderMap.get(dirPath)!
+        parent.children!.push(fileNode)
+      }
+      
+      // Set the new file tree and store file contents
+      fileManager.setFileTree(rootNode)
+      setExtractedFiles(fileContents)
+      refreshFileTree()
+      
+      alert(`Successfully extracted ${extractedCount} files from ZIP`)
+    } catch (error) {
+      console.error('Failed to extract ZIP:', error)
+      alert('Failed to extract ZIP file')
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
   }
 
   const handleRightClick = (e: React.MouseEvent, node: FileTreeNode) => {
@@ -134,67 +225,18 @@ export default function Sidebar() {
     setContextMenu(null)
   }
 
-  const handleNewFile = (parentNode?: FileTreeNode) => {
-    setCreatingFile({ parentId: parentNode?.id, type: 'file' })
-    setContextMenu(null)
+  const triggerZipUpload = () => {
+    fileInputRef.current?.click()
   }
 
-  const handleNewFolder = (parentNode?: FileTreeNode) => {
-    setCreatingFile({ parentId: parentNode?.id, type: 'folder' })
-    setContextMenu(null)
-  }
-
-  const getFileContent = (filename: string): string => {
-    const contentMap: Record<string, string> = {
-      'MainEditor.tsx': `'use client'
-
-import { useEffect, useRef } from 'react'
-import { useIDEStore } from '@/stores/ide-store'
-
-export default function MainEditor() {
-  // Monaco Editor implementation
-  return <div>Editor</div>
-}`,
-      'layout.tsx': `import type { Metadata } from 'next'
-
-export const metadata: Metadata = {
-  title: 'Kriya IDE'
-}
-
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  return (
-    <html lang="en">
-      <body>{children}</body>
-    </html>
-  )
-}`,
-      'package.json': `{
-  "name": "kriya-ide",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build"
-  }
-}`,
-      'README.md': `# Kriya IDE
-
-A modern, enterprise-level IDE built with Next.js and React.
-
-## Features
-
-- Monaco Editor
-- File Management
-- Terminal Integration
-- Git Integration`
+  const getFileContent = (filename: string, filePath?: string): string => {
+    // Check if we have extracted content for this file
+    if (filePath && extractedFiles.has(filePath.replace(/^\//, ''))) {
+      return extractedFiles.get(filePath.replace(/^\//, ''))!
     }
-    return contentMap[filename] || `// ${filename}
-
-// File content here...`
+    
+    // Return empty content for files not in extracted ZIP
+    return `// ${filename}\n\n// No content available`
   }
 
   const getLanguage = (filename: string): string => {
@@ -251,78 +293,11 @@ A modern, enterprise-level IDE built with Next.js and React.
           ) : (
             <span className="flex-1">{node.name}</span>
           )}
-          
-          {!isRenaming && (
-            <div className="opacity-0 group-hover:opacity-100 flex gap-1">
-              {node.type === 'directory' && (
-                <>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleNewFile(node) }}
-                    className="w-4 h-4 flex items-center justify-center rounded hover:bg-zinc-700 transition"
-                    title="New File"
-                  >
-                    <i className="ph ph-file-plus text-[10px] text-zinc-400"></i>
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleNewFolder(node) }}
-                    className="w-4 h-4 flex items-center justify-center rounded hover:bg-zinc-700 transition"
-                    title="New Folder"
-                  >
-                    <i className="ph ph-folder-plus text-[10px] text-zinc-400"></i>
-                  </button>
-                </>
-              )}
-            </div>
-          )}
         </div>
         
         {node.type === 'directory' && node.isExpanded && node.children && (
           <div>
             {node.children.map(child => renderFileTree(child, depth + 1))}
-            {creatingFile?.parentId === node.id && (
-              <div 
-                className="flex items-center gap-2 px-3 py-1 text-xs"
-                style={{ paddingLeft: `${(depth + 1) * 12 + 12}px` }}
-              >
-                <i className={`${
-                  creatingFile.type === 'folder' ? 'ph-fill ph-folder' : 'ph ph-file'
-                } text-sm text-zinc-500`}></i>
-                <input
-                  type="text"
-                  value={newItemName}
-                  onChange={(e) => setNewItemName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleCreateItem()
-                    if (e.key === 'Escape') handleCancelCreate()
-                  }}
-                  onBlur={handleCancelCreate}
-                  className="flex-1 bg-transparent border-b border-zinc-600 text-white text-xs outline-none"
-                  placeholder={`${creatingFile.type} name`}
-                  autoFocus
-                />
-              </div>
-            )}
-          </div>
-        )}
-        
-        {creatingFile?.parentId === undefined && node === fileTree && (
-          <div className="flex items-center gap-2 px-3 py-1 text-xs" style={{ paddingLeft: '12px' }}>
-            <i className={`${
-              creatingFile?.type === 'folder' ? 'ph-fill ph-folder' : 'ph ph-file'
-            } text-sm text-zinc-500`}></i>
-            <input
-              type="text"
-              value={newItemName}
-              onChange={(e) => setNewItemName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleCreateItem()
-                if (e.key === 'Escape') handleCancelCreate()
-              }}
-              onBlur={handleCancelCreate}
-              className="flex-1 bg-transparent border-b border-zinc-600 text-white text-xs outline-none"
-              placeholder={`${creatingFile?.type} name`}
-              autoFocus
-            />
           </div>
         )}
       </div>
@@ -375,18 +350,12 @@ A modern, enterprise-level IDE built with Next.js and React.
                 <span className="label">Files</span>
                 <div className="flex gap-1">
                   <button 
-                    onClick={() => setCreatingFile({ type: 'file' })}
-                    className="w-6 h-6 flex items-center justify-center rounded hover:bg-zinc-700 transition-colors"
-                    title="New File (Ctrl+N)"
+                    onClick={triggerZipUpload}
+                    disabled={uploading}
+                    className="w-6 h-6 flex items-center justify-center rounded hover:bg-zinc-700 transition-colors disabled:opacity-50"
+                    title="Upload ZIP file"
                   >
-                    <i className="ph ph-file-plus text-white text-xs"></i>
-                  </button>
-                  <button 
-                    onClick={() => setCreatingFile({ type: 'folder' })}
-                    className="w-6 h-6 flex items-center justify-center rounded hover:bg-zinc-700 transition-colors"
-                    title="New Folder"
-                  >
-                    <i className="ph ph-folder-plus text-white text-xs"></i>
+                    <i className={`ph ${uploading ? 'ph-spinner ph-spin' : 'ph-upload'} text-white text-xs`}></i>
                   </button>
                   <button 
                     onClick={() => refreshFileTree()}
@@ -397,6 +366,13 @@ A modern, enterprise-level IDE built with Next.js and React.
                   </button>
                 </div>
               </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".zip"
+                onChange={handleZipUpload}
+                className="hidden"
+              />
               <div className="flex-1 overflow-y-auto">
                 {fileTree && renderFileTree(fileTree)}
               </div>
@@ -507,26 +483,6 @@ A modern, enterprise-level IDE built with Next.js and React.
           className="fixed bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl z-50 py-1 min-w-[160px]"
           style={{ left: contextMenu.x, top: contextMenu.y }}
         >
-          {contextMenu.node.type === 'directory' && (
-            <>
-              <button
-                onClick={() => handleNewFile(contextMenu.node)}
-                className="w-full px-3 py-1.5 text-left text-xs text-zinc-300 hover:bg-zinc-800 transition flex items-center gap-2"
-              >
-                <i className="ph ph-file-plus text-xs"></i>
-                New File
-              </button>
-              <button
-                onClick={() => handleNewFolder(contextMenu.node)}
-                className="w-full px-3 py-1.5 text-left text-xs text-zinc-300 hover:bg-zinc-800 transition flex items-center gap-2"
-              >
-                <i className="ph ph-folder-plus text-xs"></i>
-                New Folder
-              </button>
-              <div className="h-px bg-zinc-700 my-1"></div>
-            </>
-          )}
-          
           <button
             onClick={() => handleRename(contextMenu.node)}
             className="w-full px-3 py-1.5 text-left text-xs text-zinc-300 hover:bg-zinc-800 transition flex items-center gap-2"

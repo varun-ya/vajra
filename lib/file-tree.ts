@@ -27,72 +27,11 @@ export class FileTreeManager {
   private initializeDefaultTree() {
     this.fileTree = {
       id: 'root',
-      name: 'kriya-ide',
+      name: 'workspace',
       path: '/',
       type: 'directory',
       isExpanded: true,
-      children: [
-        {
-          id: 'app',
-          name: 'app',
-          path: '/app',
-          type: 'directory',
-          isExpanded: false,
-          children: [
-            { id: 'layout.tsx', name: 'layout.tsx', path: '/app/layout.tsx', type: 'file', size: 1024 },
-            { id: 'page.tsx', name: 'page.tsx', path: '/app/page.tsx', type: 'file', size: 2048 },
-            { id: 'globals.css', name: 'globals.css', path: '/app/globals.css', type: 'file', size: 512 },
-            {
-              id: 'api',
-              name: 'api',
-              path: '/app/api',
-              type: 'directory',
-              isExpanded: false,
-              children: [
-                { id: 'auth-route', name: 'route.ts', path: '/app/api/auth/route.ts', type: 'file', size: 768 },
-                { id: 'search-route', name: 'route.ts', path: '/app/api/search/route.ts', type: 'file', size: 1024 }
-              ]
-            }
-          ]
-        },
-        {
-          id: 'components',
-          name: 'components',
-          path: '/components',
-          type: 'directory',
-          isExpanded: true,
-          children: [
-            { id: 'MainEditor.tsx', name: 'MainEditor.tsx', path: '/components/MainEditor.tsx', type: 'file', size: 4096 },
-            { id: 'Sidebar.tsx', name: 'Sidebar.tsx', path: '/components/Sidebar.tsx', type: 'file', size: 3072 },
-            { id: 'Terminal.tsx', name: 'Terminal.tsx', path: '/components/Terminal.tsx', type: 'file', size: 2560 },
-            { id: 'CommandPalette.tsx', name: 'CommandPalette.tsx', path: '/components/CommandPalette.tsx', type: 'file', size: 1800 }
-          ]
-        },
-        {
-          id: 'stores',
-          name: 'stores',
-          path: '/stores',
-          type: 'directory',
-          isExpanded: false,
-          children: [
-            { id: 'ide-store.ts', name: 'ide-store.ts', path: '/stores/ide-store.ts', type: 'file', size: 1536 }
-          ]
-        },
-        {
-          id: 'lib',
-          name: 'lib',
-          path: '/lib',
-          type: 'directory',
-          isExpanded: false,
-          children: [
-            { id: 'file-system.ts', name: 'file-system.ts', path: '/lib/file-system.ts', type: 'file', size: 2048 },
-            { id: 'auth-service.ts', name: 'auth-service.ts', path: '/lib/auth-service.ts', type: 'file', size: 3072 }
-          ]
-        },
-        { id: 'package.json', name: 'package.json', path: '/package.json', type: 'file', size: 768 },
-        { id: 'next.config.js', name: 'next.config.js', path: '/next.config.js', type: 'file', size: 512 },
-        { id: 'README.md', name: 'README.md', path: '/README.md', type: 'file', size: 1024 }
-      ]
+      children: []
     }
   }
 
@@ -202,6 +141,21 @@ export class FileTreeManager {
     }
     
     return null
+  }
+
+  clearFileTree(): void {
+    this.fileTree = {
+      id: 'root',
+      name: 'extracted-project',
+      path: '/',
+      type: 'directory',
+      isExpanded: true,
+      children: []
+    }
+  }
+
+  setFileTree(newTree: FileTreeNode): void {
+    this.fileTree = newTree
   }
 
   getFileIcon(filename: string): string {
